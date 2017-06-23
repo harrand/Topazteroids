@@ -11,7 +11,7 @@ int main()
 	LogUtility::message("Initialising camera, player and window...");
 	Camera cam;
 	Player player(10, cam);
-	Window wnd(800, 600, "Asteroids");
+	Window wnd(800, 600, "Asteroids (Level 1)");
 	LogUtility::message("Initialising engine...");
 	Engine engine(player, wnd, "../../../res/runtime/properties.mdl");
 	LogUtility::message("Initialising key and mouse controllers...");
@@ -67,7 +67,7 @@ int main()
 					LogUtility::warning("CRITICAL WARNING: System Shutdown imͯm̽in̰eͯn͈t͉ ̈́upo͝n̍ n̥̹e̘͠x͉̌t͎͗͛ ͬͦͩï̶̙mͦp͏a͈c̶̹t͈!");
 				if(lives == 0)
 				{
-					LogUtility::error("HͮUL̍L̊ I̱NT̜E̳̰͆G̸̬̏R̿I̪ͬT͎̓ͫY̴̳̥ ̈́Ć͂ͩO̦͔̐M͕͉̙͙͙͎̀̔̀̚P͉̗̣̘̀̓̀R̴̊͐ͭ̓ͅÓͬ̏ͅ҉̻̓̈́͒Ḿ̫̆͋̆̔̎̆I͋S̬͍̻̓ͦ̑̆E̋D̡̛̮̲̜͇͍͊ͬ̂̄͗̎ͥ͗̓͗͛̕͜,̶̢̤̞̀̎̚ ̢̛̹̟̩͈̩̅ͩ̀͂̈́̉ͩͧ̔̈́͜A̶̭̝͍͎͌ͭ̿́͐̉̌̆-̨̱̲̍̊");
+					LogUtility::error("HͮUL̍L̊ I̱NT̜E̳̰͆G̸̬̏R̿I̪ͬT͎̓ͫY̴̳̥ ̈́Ć͂ͩO̦͔̐M͕͉̙͙͙͎̀̔̀̚P͉̗̣̘̀̓̀R̴̊͐ͭ̓ͅÓͬ̏ͅ҉̻̓̈́͒Ḿ̫̆͋̆̔̎̆I͋S̬͍̻̓ͦ̑̆E̋D̡̛̮̲̜͇͍͊ͬ̂̄͗̎ͥ͗̓͗͛̕͜,̶̢̤̞̀̎̚ ̢̛̹̟̩͈̩̅ͩ̀͂̈́̉ͩͧ̔̈́͜ABORṰ̶̝͍͎͌̿́͐̉̌̆-̨̱̲̍̊");
 					abort();
 				}
 			}
@@ -87,7 +87,9 @@ int main()
 			tk.reload();
 			score += 5;
 			if(score >= (500 * level))
-				level++;
+			{
+				wnd.setTitle("Asteroids (Level "+ CastUtility::toString(++level) + ")");
+			}
 			LogUtility::message("Score = ", score, " (Level ", level, ")");
 		}
 	}
