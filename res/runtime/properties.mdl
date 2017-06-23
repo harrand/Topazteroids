@@ -1,0 +1,8 @@
+resources: ../../../res/runtime/resources.data
+default_world: asteroids.world
+default_shader: ../../../res/runtime/shaders/asteroids
+music_path: ../../../res/runtime/music/asteroids.wav
+asteroids: 75
+asteroid_dispersion: 2000
+asteroid_max_speed: 200
+asteroid_size: 75

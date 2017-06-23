@@ -1,0 +1,1 @@
+windres asteroids.rc -O coff -o asteroids.res
