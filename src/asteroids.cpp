@@ -2,6 +2,37 @@
 #include <time.h>
 #include <stdlib.h>
 
+void spawnAsteroid(Player& player, Engine& engine, unsigned int level, int asteroid_dispersion, int asteroid_max_speed, unsigned int asteroid_size)
+{
+	std::vector<std::pair<std::string, Texture::TextureType>> textures;
+	switch(rand() % 3)
+	{
+	case 0:
+		textures.push_back(std::make_pair(engine.getResources().getTag("lava.path"), Texture::TextureType::TEXTURE));
+		textures.push_back(std::make_pair(engine.getResources().getTag("lava_normalmap.path"), Texture::TextureType::NORMAL_MAP));
+		textures.push_back(std::make_pair(engine.getResources().getTag("lava_parallaxmap.path"), Texture::TextureType::PARALLAX_MAP));
+		textures.push_back(std::make_pair(engine.getResources().getTag("default_displacementmap.path"), Texture::TextureType::DISPLACEMENT_MAP));
+	break;
+	case 1:
+		textures.push_back(std::make_pair(engine.getResources().getTag("sand.path"), Texture::TextureType::TEXTURE));
+		textures.push_back(std::make_pair(engine.getResources().getTag("sand_normalmap.path"), Texture::TextureType::NORMAL_MAP));
+		textures.push_back(std::make_pair(engine.getResources().getTag("sand_parallaxmap.path"), Texture::TextureType::PARALLAX_MAP));
+		textures.push_back(std::make_pair(engine.getResources().getTag("default_displacementmap.path"), Texture::TextureType::DISPLACEMENT_MAP));
+	break;
+	default:
+		textures.push_back(std::make_pair(engine.getResources().getTag("metal.path"), Texture::TextureType::TEXTURE));
+		textures.push_back(std::make_pair(engine.getResources().getTag("metal_normalmap.path"), Texture::TextureType::NORMAL_MAP));
+		textures.push_back(std::make_pair(engine.getResources().getTag("metal_parallaxmap.path"), Texture::TextureType::PARALLAX_MAP));
+		textures.push_back(std::make_pair(engine.getResources().getTag("default_displacementmap.path"), Texture::TextureType::DISPLACEMENT_MAP));
+	break;
+	}
+	
+	EntityObject asteroid(engine.getResources().getTag("sphere.path"), textures, 10, Vector3F(rand() % (asteroid_dispersion * 2) - asteroid_dispersion, rand() % (asteroid_dispersion * 2) - asteroid_dispersion, rand() % (asteroid_dispersion * 2) - asteroid_dispersion), Vector3F(), Vector3F(asteroid_size, asteroid_size, asteroid_size) * (level == 1 ? level : (rand() % (level - 1) + 1)));			asteroid.applyForce("motion", Force(Vector3F(rand() % (asteroid_max_speed * 2) - asteroid_max_speed, rand() % (asteroid_max_speed * 2) - asteroid_max_speed, rand() % (asteroid_max_speed * 2) - asteroid_max_speed) * level));
+	// Don't spawn unfairly close
+	if((asteroid.getPosition() - player.getPosition()).length() > (asteroid_size * 2))
+		engine.getWorldR().addEntityObject(asteroid);
+}
+
 #ifdef main
 #undef main
 #endif
@@ -21,7 +52,6 @@ int main()
 
 	AudioMusic music(engine.getProperties().getTag("music_path"));
 	music.play();
-
 	unsigned int level = 1;
 	unsigned int lives = 5;
 	LogUtility::message("Beginning asteroid generation...");
@@ -35,16 +65,8 @@ int main()
 	LogUtility::message("\tAsteroid Size = ", asteroid_size);
 	for(unsigned int i = 0; i < asteroids; i++)
 	{
-		std::vector<std::pair<std::string, Texture::TextureType>> textures;
-		textures.push_back(std::make_pair(engine.getResources().getTag("lava.path"), Texture::TextureType::TEXTURE));
-		textures.push_back(std::make_pair(engine.getResources().getTag("lava_normalmap.path"), Texture::TextureType::NORMAL_MAP));
-		textures.push_back(std::make_pair(engine.getResources().getTag("lava_parallaxmap.path"), Texture::TextureType::PARALLAX_MAP));
-		textures.push_back(std::make_pair(engine.getResources().getTag("default_displacementmap.path"), Texture::TextureType::DISPLACEMENT_MAP));
-		EntityObject asteroid(engine.getResources().getTag("sphere.path"), textures, 10, Vector3F(rand() % (asteroid_dispersion * 2) - asteroid_dispersion, rand() % (asteroid_dispersion * 2) - asteroid_dispersion, rand() % (asteroid_dispersion * 2) - asteroid_dispersion), Vector3F(rand(), rand(), rand()), Vector3F(asteroid_size, asteroid_size, asteroid_size));
-		asteroid.applyForce("motion", Force(Vector3F(rand() % (asteroid_max_speed * 2) - asteroid_max_speed, rand() % (asteroid_max_speed * 2) - asteroid_max_speed, rand() % (asteroid_max_speed * 2) - asteroid_max_speed) * level));
-		// Don't spawn unfairly close
-		if((asteroid.getPosition() - player.getPosition()).length() > (asteroid_size * 2))
-			engine.getWorldR().addEntityObject(asteroid);
+		//Player& player, Engine& engine, unsigned int level, int asteroid_dispersion, int asteroid_max_speed, unsigned int asteroid_size
+		spawnAsteroid(player, engine, level, asteroid_dispersion, asteroid_max_speed, asteroid_size);
 	}
 	LogUtility::message("Asteroids are near you, DON'T CRASH!");
 	
@@ -75,21 +97,12 @@ int main()
 			else if((eo.getPosition() - player.getPosition()).length() > 10000)
 			{
 				engine.getWorldR().getEntityObjectsR().erase(engine.getWorldR().getEntityObjectsR().begin() + i);
-				LogUtility::message("Culled an asteroid for being too far away...");
+				//LogUtility::message("Culled an asteroid for being too far away...");
 			}
 		}
 		if(tk.millisPassed((500 * level) - score))
 		{
-			std::vector<std::pair<std::string, Texture::TextureType>> textures;
-			textures.push_back(std::make_pair(engine.getResources().getTag("lava.path"), Texture::TextureType::TEXTURE));
-			textures.push_back(std::make_pair(engine.getResources().getTag("lava_normalmap.path"), Texture::TextureType::NORMAL_MAP));
-			textures.push_back(std::make_pair(engine.getResources().getTag("lava_parallaxmap.path"), Texture::TextureType::PARALLAX_MAP));
-			textures.push_back(std::make_pair(engine.getResources().getTag("default_displacementmap.path"), Texture::TextureType::DISPLACEMENT_MAP));
-			EntityObject asteroid(engine.getResources().getTag("sphere.path"), textures, 10, Vector3F(rand() % (asteroid_dispersion * 2) - asteroid_dispersion, rand() % (asteroid_dispersion * 2) - asteroid_dispersion, rand() % (asteroid_dispersion * 2) - asteroid_dispersion), Vector3F(), Vector3F(asteroid_size, asteroid_size, asteroid_size) * (level == 1 ? level : (rand() % (level - 1) + 1)));
-			asteroid.applyForce("motion", Force(Vector3F(rand() % (asteroid_max_speed * 2) - asteroid_max_speed, rand() % (asteroid_max_speed * 2) - asteroid_max_speed, rand() % (asteroid_max_speed * 2) - asteroid_max_speed) * level));
-			// Don't spawn unfairly close
-			if((asteroid.getPosition() - player.getPosition()).length() > (asteroid_size * 2))
-				engine.getWorldR().addEntityObject(asteroid);
+			spawnAsteroid(player, engine, level, asteroid_dispersion, asteroid_max_speed, asteroid_size);
 			tk.reload();
 			score += 5;
 			if(score >= (500 * level))
