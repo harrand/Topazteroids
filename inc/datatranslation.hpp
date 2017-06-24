@@ -5,7 +5,7 @@
 #include "mdl.hpp"
 #include <unordered_map>
 #include <memory>
-#define RES_POINT std::string("../res/runtime")
+#define RES_POINT std::string("../../../res/runtime")
 
 class DataTranslation
 {

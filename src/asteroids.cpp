@@ -54,8 +54,9 @@ int main()
 	{
 		tk.update();
 		engine.update(shader_id, mc, kc);
-		for(EntityObject eo : engine.getWorld().getEntityObjects())
+		for(std::size_t i = 0; i < engine.getWorld().getEntityObjects().size(); i++)
 		{
+			EntityObject eo = engine.getWorldR().getEntityObjectsR().at(i);
 			if((eo.getPosition() - player.getPosition()).length() < (eo.getScale().getX()) && player.getForces().find("impact") == player.getForces().end())
 			{
 				Commands::inputCommand("play noise.wav me", engine.getWorldR(), player, engine.getDefaultShader());
@@ -70,6 +71,11 @@ int main()
 					LogUtility::error("HͮUL̍L̊ I̱NT̜E̳̰͆G̸̬̏R̿I̪ͬT͎̓ͫY̴̳̥ ̈́Ć͂ͩO̦͔̐M͕͉̙͙͙͎̀̔̀̚P͉̗̣̘̀̓̀R̴̊͐ͭ̓ͅÓͬ̏ͅ҉̻̓̈́͒Ḿ̫̆͋̆̔̎̆I͋S̬͍̻̓ͦ̑̆E̋D̡̛̮̲̜͇͍͊ͬ̂̄͗̎ͥ͗̓͗͛̕͜,̶̢̤̞̀̎̚ ̢̛̹̟̩͈̩̅ͩ̀͂̈́̉ͩͧ̔̈́͜ABORṰ̶̝͍͎͌̿́͐̉̌̆-̨̱̲̍̊");
 					abort();
 				}
+			}
+			else if((eo.getPosition() - player.getPosition()).length() > 10000)
+			{
+				engine.getWorldR().getEntityObjectsR().erase(engine.getWorldR().getEntityObjectsR().begin() + i);
+				LogUtility::message("Culled an asteroid for being too far away...");
 			}
 		}
 		if(tk.millisPassed((500 * level) - score))
