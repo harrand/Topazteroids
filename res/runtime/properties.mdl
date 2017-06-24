@@ -6,3 +6,4 @@ asteroids: 75
 asteroid_dispersion: 2000
 asteroid_max_speed: 200
 asteroid_size: 75
+asteroid_chase_multiplier: 0.025
