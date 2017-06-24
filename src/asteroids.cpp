@@ -27,9 +27,9 @@ void spawnAsteroid(Player& player, Engine& engine, unsigned int level, int aster
 	break;
 	}
 	
-	EntityObject asteroid(engine.getResources().getTag("sphere.path"), textures, 10, Vector3F(rand() % (asteroid_dispersion * 2) - asteroid_dispersion, rand() % (asteroid_dispersion * 2) - asteroid_dispersion, rand() % (asteroid_dispersion * 2) - asteroid_dispersion), Vector3F(), Vector3F(asteroid_size, asteroid_size, asteroid_size) * (level == 1 ? level : (rand() % (level - 1) + 1)));
+	EntityObject asteroid(engine.getResources().getTag("sphere.path"), textures, 10, player.getPosition() + Vector3F(rand() % (asteroid_dispersion * 2) - asteroid_dispersion, rand() % (asteroid_dispersion * 2) - asteroid_dispersion, rand() % (asteroid_dispersion * 2) - asteroid_dispersion), Vector3F(), Vector3F(asteroid_size, asteroid_size, asteroid_size) * (level == 1 ? level : (rand() % (level - 1) + 1)));
 	asteroid.applyForce("motion", Force(Vector3F(rand() % (asteroid_max_speed * 2) - asteroid_max_speed, rand() % (asteroid_max_speed * 2) - asteroid_max_speed, rand() % (asteroid_max_speed * 2) - asteroid_max_speed) * level));
-	asteroid.applyForce("chase", Force((asteroid.getPosition() - player.getPosition()) * level * level * -CastUtility::fromString<float>(engine.getProperties().getTag("asteroid_chase_multiplier"))));
+	asteroid.applyForce("chase", Force((asteroid.getPosition() - player.getPosition()).normalised() * level * level * -CastUtility::fromString<float>(engine.getProperties().getTag("asteroid_chase_multiplier"))));
 	// Don't spawn unfairly close
 	if((asteroid.getPosition() - player.getPosition()).length() > (asteroid_size * 2))
 		engine.getWorldR().addEntityObject(asteroid);
