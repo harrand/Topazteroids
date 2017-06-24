@@ -85,7 +85,7 @@ int main()
 			textures.push_back(std::make_pair(engine.getResources().getTag("lava_normalmap.path"), Texture::TextureType::NORMAL_MAP));
 			textures.push_back(std::make_pair(engine.getResources().getTag("lava_parallaxmap.path"), Texture::TextureType::PARALLAX_MAP));
 			textures.push_back(std::make_pair(engine.getResources().getTag("default_displacementmap.path"), Texture::TextureType::DISPLACEMENT_MAP));
-			EntityObject asteroid(engine.getResources().getTag("sphere.path"), textures, 10, Vector3F(rand() % (asteroid_dispersion * 2) - asteroid_dispersion, rand() % (asteroid_dispersion * 2) - asteroid_dispersion, rand() % (asteroid_dispersion * 2) - asteroid_dispersion), Vector3F(), Vector3F(asteroid_size, asteroid_size, asteroid_size) * level);
+			EntityObject asteroid(engine.getResources().getTag("sphere.path"), textures, 10, Vector3F(rand() % (asteroid_dispersion * 2) - asteroid_dispersion, rand() % (asteroid_dispersion * 2) - asteroid_dispersion, rand() % (asteroid_dispersion * 2) - asteroid_dispersion), Vector3F(), Vector3F(asteroid_size, asteroid_size, asteroid_size) * (level == 1 ? level : (rand() % (level - 1) + 1)));
 			asteroid.applyForce("motion", Force(Vector3F(rand() % (asteroid_max_speed * 2) - asteroid_max_speed, rand() % (asteroid_max_speed * 2) - asteroid_max_speed, rand() % (asteroid_max_speed * 2) - asteroid_max_speed) * level));
 			// Don't spawn unfairly close
 			if((asteroid.getPosition() - player.getPosition()).length() > (asteroid_size * 2))
