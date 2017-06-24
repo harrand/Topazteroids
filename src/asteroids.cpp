@@ -1,6 +1,25 @@
 #include "engine.hpp"
+#include "powerup.hpp"
 #include <time.h>
 #include <stdlib.h>
+
+void spawnPowerup(Player& player, Engine& engine, int asteroid_dispersion)
+{
+	if(engine.getWorld().getObjects().size() >= 8)
+		return; // Or lighting will break
+	Powerup powerup(Powerup::PowerupType(rand() % static_cast<unsigned int>(Powerup::PowerupType::NIL)), player.getPosition() + Vector3F(rand() % (asteroid_dispersion * 2) - asteroid_dispersion, rand() % (asteroid_dispersion * 2) - asteroid_dispersion, rand() % (asteroid_dispersion * 2) - asteroid_dispersion), CastUtility::fromString<float>(engine.getProperties().getTag("powerup_brightness")));
+	engine.getWorldR().addLight(powerup, engine.getDefaultShader().getProgramHandle());
+	
+	std::vector<std::pair<std::string, Texture::TextureType>> textures;
+	textures.push_back(std::make_pair(engine.getResources().getTag("undefined.path"), Texture::TextureType::TEXTURE));
+	textures.push_back(std::make_pair(engine.getResources().getTag("default_normalmap.path"), Texture::TextureType::NORMAL_MAP));
+	textures.push_back(std::make_pair(engine.getResources().getTag("default_parallaxmap.path"), Texture::TextureType::PARALLAX_MAP));
+	textures.push_back(std::make_pair(engine.getResources().getTag("default_displacementmap.path"), Texture::TextureType::DISPLACEMENT_MAP));
+	float powerup_size = CastUtility::fromString<float>(engine.getProperties().getTag("powerup_size"));
+	engine.getWorldR().addObject(Object(engine.getResources().getTag("sphere.path"), textures, powerup.getPosition(), Vector3F(), Vector3F(powerup_size, powerup_size, powerup_size)));
+	
+	LogUtility::message("Powerup spawned at location ", StringUtility::format(StringUtility::devectoriseList3<float>(powerup.getPosition())), " with colour ", StringUtility::format(StringUtility::devectoriseList3<float>(powerup.getColour())));
+}
 
 void spawnAsteroid(Player& player, Engine& engine, unsigned int level, int asteroid_dispersion, int asteroid_max_speed, unsigned int asteroid_size)
 {
@@ -102,8 +121,22 @@ int main()
 				//LogUtility::message("Culled an asteroid for being too far away...");
 			}
 		}
+		for(std::size_t i = 0; i < engine.getWorld().getObjects().size(); i++)
+		{
+			Object& obj = engine.getWorldR().getObjectsR().at(i);
+			if((obj.getPosition() - player.getPosition()).length() < (obj.getScale().getX()))
+			{
+				// player has touched a powerup
+				engine.getWorldR().getObjectsR().erase(engine.getWorldR().getObjectsR().begin() + i);
+				lives++;
+				LogUtility::message("You found a powerup, gained a life!");
+				Commands::inputCommand("play powerup.wav me", engine.getWorldR(), player, engine.getDefaultShader());
+			}
+		}
 		if(tk.millisPassed((500 * level) - score))
 		{
+			if(rand() % 5 == 1)
+				spawnPowerup(player, engine, asteroid_dispersion);
 			spawnAsteroid(player, engine, level, asteroid_dispersion, asteroid_max_speed, asteroid_size);
 			tk.reload();
 			score += 5;

@@ -3,7 +3,7 @@ default_world: asteroids.world
 default_shader: ../../../res/runtime/shaders/asteroids
 music_path: ../../../res/runtime/music/asteroids.wav
 # Number of asteroids spawned when the game starts
-asteroids: 75
+asteroids: 250
 # Size of the field in which an asteroid can spawn, decreases difficulty
 asteroid_dispersion: 2000
 # Maximum random force applied to an asteroid, decreases difficulty
@@ -11,4 +11,8 @@ asteroid_max_speed: 200
 # Average size of an asteroid (will increase with level), increases difficulty
 asteroid_size: 75
 # Multiplier to the chase component of asteroid force, HUGELY increases difficulty
-asteroid_chase_multiplier: 200
+asteroid_chase_multiplier: 150
+# Brightness of the light emitted by a powerup
+powerup_brightness: 5000
+# Size of powerup sphere
+powerup_size: 50
