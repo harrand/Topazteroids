@@ -15,6 +15,7 @@ for %%o in (.o) do move "*%%o" "%cpldir%"
 cd "%cpldir%"
 
 set lnkdir=%cpldir%\lnk
+if not exist %lnkdir% mkdir %lnkdir%
 
 g++ -O3 -static-libgcc -static-libstdc++ -o asteroids.exe *.o "%scriptdir%\res\exe\asteroids.res" -L"%libdir%" -lOpenGL32 -lSDL2 -lSDL2_mixer -lSDL2main -lmdl -ltopazdll
 move asteroids.exe %lnkdir%

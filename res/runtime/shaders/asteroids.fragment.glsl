@@ -32,7 +32,7 @@ uniform BaseLight lights[MAX_LIGHTS];
 
 vec4 lightColour = vec4(1, 1, 1, 1);
 //500
-float lightWattage = 25000;
+float lightWattage = 250;
 
 vec3 position_worldspace = (modelMatrix * vec4(position_modelspace, 1.0)).xyz;
 vec3 position_cameraspace = (viewMatrix * vec4(position_worldspace, 1.0)).xyz;
@@ -56,7 +56,7 @@ vec4 textureColour = texture2D(textureSampler, getTexcoordOffset());
 vec4 getDiffuseComponent(vec3 parsedNormal_tangentspace)
 {
 	float cosTheta = clamp(dot(parsedNormal_tangentspace, lightDirection_tangentspace), 0.0, 1.0);
-	return textureColour * lightColour * lightWattage * cosTheta / (distance * distance);
+	return textureColour * lightColour * lightWattage * cosTheta / (/*distance **/ distance);
 }
 
 vec4 getDiffuseComponentFromLight(BaseLight l, vec3 parsedNormal_tangentspace)
@@ -65,7 +65,7 @@ vec4 getDiffuseComponentFromLight(BaseLight l, vec3 parsedNormal_tangentspace)
 	vec3 displacementFromLight = lightPos_cameraspace - position_cameraspace;
 	float cosTheta = clamp(dot(parsedNormal_tangentspace, tbnMatrix * displacementFromLight), 0.0, 1.0);
 	float distanceFromLight = length(displacementFromLight);
-	return textureColour * vec4(l.colour, 1) * l.power * cosTheta / (distanceFromLight * distanceFromLight);
+	return textureColour * vec4(l.colour, 1) * l.power * cosTheta / (/*distanceFromLight **/ distanceFromLight);
 }
 
 vec4 getAmbientComponent()
@@ -78,7 +78,7 @@ vec4 getSpecularComponent(vec3 parsedNormal_tangentspace)
 	vec3 E = normalize(eyeDirection_tangentspace);
 	vec3 R = reflect(-normalize(lightDirection_tangentspace), parsedNormal_tangentspace);
 	float cosAlpha = clamp(dot(E, R), 0, 1);
-	return textureColour * lightColour * lightWattage * pow(cosAlpha, 5) / (distance * distance);
+	return textureColour * lightColour * lightWattage * pow(cosAlpha, 5) / (/*distance **/ distance);
 }
 
 vec4 getSpecularComponentFromLight(BaseLight l, vec3 parsedNormal_tangentspace)
@@ -89,7 +89,7 @@ vec4 getSpecularComponentFromLight(BaseLight l, vec3 parsedNormal_tangentspace)
 	vec3 R = reflect(-normalize(tbnMatrix * displacementFromLight), parsedNormal_tangentspace);
 	float cosAlpha = clamp(dot(E, R), 0, 1);
 	float distanceFromLight = length(displacementFromLight);
-	return textureColour * vec4(l.colour, 1) * l.power * pow(cosAlpha, 5) / (distanceFromLight * distanceFromLight);
+	return textureColour * vec4(l.colour, 1) * l.power * pow(cosAlpha, 5) / (/*distanceFromLight **/ distanceFromLight);
 }
 
 void main()
