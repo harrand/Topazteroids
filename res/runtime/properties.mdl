@@ -3,7 +3,7 @@ default_world: asteroids.world
 default_shader: ../../../res/runtime/shaders/asteroids
 music_path: ../../../res/runtime/music/asteroids.wav
 # Number of asteroids spawned when the game starts
-asteroids: 250
+asteroids: 25
 # Size of the field in which an asteroid can spawn, decreases difficulty
 asteroid_dispersion: 2000
 # Maximum random force applied to an asteroid, decreases difficulty
@@ -16,3 +16,9 @@ asteroid_chase_multiplier: 50
 powerup_size: 50
 # Size of force of pulse
 pulse_force: 5000
+# Key to shoot a torpedo
+shoot_keybind: F
+# Size of a torpedo projectile
+torpedo_size: 30
+# Speed of a torpedo projectile
+torpedo_speed: 50000

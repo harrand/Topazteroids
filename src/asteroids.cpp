@@ -2,6 +2,29 @@
 #include <time.h>
 #include <stdlib.h>
 
+void spawnTorpedo(Player& player, Engine& engine)
+{
+	std::vector<std::pair<std::string, Texture::TextureType>> textures;
+	textures.push_back(std::make_pair(engine.getResources().getTag("torpedo.path"), Texture::TextureType::TEXTURE));
+	textures.push_back(std::make_pair(engine.getResources().getTag("stone_normalmap.path"), Texture::TextureType::NORMAL_MAP));
+	textures.push_back(std::make_pair(engine.getResources().getTag("stone_parallaxmap.path"), Texture::TextureType::PARALLAX_MAP));
+	textures.push_back(std::make_pair(engine.getResources().getTag("default_displacementmap.path"), Texture::TextureType::DISPLACEMENT_MAP));
+	float torpedo_size = CastUtility::fromString<float>(engine.getProperties().getTag("torpedo_size"));
+	EntityObject torpedo(engine.getResources().getTag("sphere.path"), textures, 10, player.getPosition(), Vector3F(), Vector3F(torpedo_size, torpedo_size, torpedo_size));
+	torpedo.applyForce("shoot", Force(player.getCamera().getForward() * CastUtility::fromString<float>(engine.getProperties().getTag("torpedo_speed"))));
+	engine.getWorldR().addEntityObject(torpedo);
+}
+
+bool isTorpedo(const EntityObject& eo, const Engine& engine)
+{
+	for(auto pair : eo.getTextures())
+	{
+		if(pair.second == Texture::TextureType::TEXTURE && pair.first == engine.getResources().getTag("torpedo.path"))
+			return true;
+	}
+	return false;
+}
+
 void spawnPowerup(Player& player, Engine& engine, int asteroid_dispersion)
 {	
 	std::vector<std::pair<std::string, Texture::TextureType>> textures;
@@ -89,10 +112,12 @@ void spawnAsteroid(Player& player, Engine& engine, unsigned int level, int aster
 	
 	EntityObject asteroid(engine.getResources().getTag("sphere.path"), textures, 10, player.getPosition() + Vector3F(rand() % (asteroid_dispersion * 2) - asteroid_dispersion, rand() % (asteroid_dispersion * 2) - asteroid_dispersion, rand() % (asteroid_dispersion * 2) - asteroid_dispersion), Vector3F(), Vector3F(asteroid_size, asteroid_size, asteroid_size) * (level == 1 ? level : (rand() % (level - 1) + 1)));
 	asteroid.applyForce("motion", Force(Vector3F(rand() % (asteroid_max_speed * 2) - asteroid_max_speed, rand() % (asteroid_max_speed * 2) - asteroid_max_speed, rand() % (asteroid_max_speed * 2) - asteroid_max_speed) * level));
-	asteroid.applyForce("chase", Force((asteroid.getPosition() - player.getPosition()).normalised() * level * level * -CastUtility::fromString<float>(engine.getProperties().getTag("asteroid_chase_multiplier"))));
+	asteroid.applyForce("chase", Force((asteroid.getPosition() - player.getPosition()).normalised() * pow(level, 1.5) * -CastUtility::fromString<float>(engine.getProperties().getTag("asteroid_chase_multiplier"))));
 	// Don't spawn unfairly close
-	if((asteroid.getPosition() - player.getPosition()).length() > (asteroid_size * 2))
+	if((asteroid.getPosition() - player.getPosition()).length() > (asteroid.getScale().getX() * 2))
 		engine.getWorldR().addEntityObject(asteroid);
+	else
+		spawnAsteroid(player, engine, level, asteroid_dispersion, asteroid_max_speed, asteroid_size);
 }
 
 #ifdef main
@@ -104,7 +129,11 @@ int main()
 	LogUtility::message("Initialising camera, player and window...");
 	Camera cam;
 	Player player(10, cam);
-	Window wnd(800, 600, "Asteroids (Level 1)");
+	Window wnd(800, 600, "Asteroids");
+	
+	KeyListener kl;
+	wnd.registerListener(kl);
+	
 	LogUtility::message("Initialising engine...");
 	Engine engine(player, wnd, "../../../res/runtime/properties.mdl");
 	LogUtility::message("Initialising key and mouse controllers...");
@@ -125,6 +154,7 @@ int main()
 	LogUtility::message("\tMaximum Dispersion = ", asteroid_dispersion);
 	LogUtility::message("\tMaximum Speed = ", asteroid_max_speed);
 	LogUtility::message("\tAsteroid Size = ", asteroid_size);
+	//SDL_SetRelativeMouseMode(SDL_TRUE);
 	for(unsigned int i = 0; i < asteroids; i++)
 	{
 		//Player& player, Engine& engine, unsigned int level, int asteroid_dispersion, int asteroid_max_speed, unsigned int asteroid_size
@@ -138,10 +168,32 @@ int main()
 	{
 		tk.update();
 		engine.update(shader_id, mc, kc);
+		if(kl.catchKeyPressed(engine.getProperties().getTag("shoot_keybind")))
+			spawnTorpedo(player, engine);
 		for(std::size_t i = 0; i < engine.getWorld().getEntityObjects().size(); i++)
 		{
 			EntityObject eo = engine.getWorldR().getEntityObjectsR().at(i);
-			if((eo.getPosition() - player.getPosition()).length() < (eo.getScale().getX()) && player.getForces().find("impact") == player.getForces().end())
+			for(std::size_t j = 0; j < engine.getWorld().getEntityObjects().size(); j++)
+			{
+				EntityObject other_eo = engine.getWorldR().getEntityObjectsR().at(j);
+				if(i == j || (eo.getPosition() - other_eo.getPosition()).length() > (eo.getScale().getX() + other_eo.getScale().getX()))
+					continue;
+				if(isTorpedo(other_eo, engine) && !isTorpedo(eo, engine))
+				{
+					// other_eo needs to despawn and break eo
+					LogUtility::message("PEW!");
+					score += 10;
+					engine.getWorldR().getEntityObjectsR().erase(engine.getWorldR().getEntityObjectsR().begin() + j);
+					engine.getWorldR().getEntityObjectsR().erase(engine.getWorldR().getEntityObjectsR().begin() + i);
+					Vector3F dir = eo.getVelocity().cross(other_eo.getVelocity()) * 0.005;
+					EntityObject daughter1(eo), daughter2(eo);
+					daughter1.setVelocity(dir);
+					daughter2.setVelocity(dir * -1);
+					engine.getWorldR().addEntityObject(daughter1);
+					engine.getWorldR().addEntityObject(daughter2);
+				}
+			}
+			if((eo.getPosition() - player.getPosition()).length() < (eo.getScale().getX()) && player.getForces().find("impact") == player.getForces().end() && !isTorpedo(eo, engine))
 			{
 				Commands::inputCommand("play noise.wav me", engine.getWorldR(), player, engine.getDefaultShader());
 				player.applyForce("impact", eo.getPosition() - player.getPosition());
@@ -153,6 +205,7 @@ int main()
 				if(lives == 0)
 				{
 					LogUtility::error("HͮUL̍L̊ I̱NT̜E̳̰͆G̸̬̏R̿I̪ͬT͎̓ͫY̴̳̥ ̈́Ć͂ͩO̦͔̐M͕͉̙͙͙͎̀̔̀̚P͉̗̣̘̀̓̀R̴̊͐ͭ̓ͅÓͬ̏ͅ҉̻̓̈́͒Ḿ̫̆͋̆̔̎̆I͋S̬͍̻̓ͦ̑̆E̋D̡̛̮̲̜͇͍͊ͬ̂̄͗̎ͥ͗̓͗͛̕͜,̶̢̤̞̀̎̚ ̢̛̹̟̩͈̩̅ͩ̀͂̈́̉ͩͧ̔̈́͜ABORṰ̶̝͍͎͌̿́͐̉̌̆-̨̱̲̍̊");
+					wnd.setTitle("Asteroids | YOU CRASHED! GAME OVER | Level " + CastUtility::toString(level));
 					abort();
 				}
 			}
@@ -178,9 +231,13 @@ int main()
 			score += 5;
 			if(score >= (500 * level))
 			{
-				wnd.setTitle("Asteroids (Level "+ CastUtility::toString(++level) + ")");
+				level++;
 			}
-			LogUtility::message("Score = ", score, " (Level ", level, ")");
+			//LogUtility::message("Score = ", score, " (Level ", level, ")");
+			std::string lifeBar = "";
+			for(unsigned int i = 0; i < lives; i++)
+				lifeBar += "[] ";
+			wnd.setTitle("Asteroids | Level " + CastUtility::toString(level) + " | Ship Integrity: " + lifeBar);
 		}
 	}
 	return 0;
