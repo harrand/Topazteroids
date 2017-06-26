@@ -2,6 +2,8 @@ resources: ../../../res/runtime/resources.data
 default_world: asteroids.world
 default_shader: ../../../res/runtime/shaders/asteroids
 music_path: ../../../res/runtime/music/asteroids.wav
+# Initial speed of ship
+initial_speed: 0.35
 # Number of asteroids spawned when the game starts
 asteroids: 25
 # Size of the field in which an asteroid can spawn, decreases difficulty
@@ -16,6 +18,8 @@ asteroid_chase_multiplier: 50
 powerup_size: 50
 # Size of force of pulse
 pulse_force: 5000
+# Speed increase percentage
+speed_increase: 10
 # Key to shoot a torpedo
 shoot_keybind: F
 # Size of a torpedo projectile

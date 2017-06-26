@@ -39,7 +39,7 @@ void spawnPowerup(Player& player, Engine& engine, int asteroid_dispersion)
 	LogUtility::message("Powerup spawned at location ", StringUtility::format(StringUtility::devectoriseList3<float>(powerup.getPosition())));
 }
 
-void consumePowerup(unsigned int& level, unsigned int& score, unsigned int& lives, Player& player, Engine& engine)
+void consumePowerup(unsigned int& level, unsigned int& score, unsigned int& lives, float initialSpeed, Player& player, Engine& engine)
 {
 	switch(rand() % 6)
 	{
@@ -71,10 +71,11 @@ void consumePowerup(unsigned int& level, unsigned int& score, unsigned int& live
 	break;
 	case 4:
 		{
-			float curSpeed = CastUtility::fromString<float>(engine.getResources().getTag("speed"));
-			Commands::inputCommand("setspeed " + CastUtility::toString(curSpeed * 2.0f), engine.getWorldR(), player, engine.getDefaultShader());
-			Commands::inputCommand("delayedcmd 5000 setspeed " + CastUtility::toString(curSpeed), engine.getWorldR(), player, engine.getDefaultShader());
-			LogUtility::message("Speed doubled for 5 seconds!");
+			float speedIncrease = CastUtility::fromString<float>(engine.getProperties().getTag("speed_increase"));
+			float curSpeed = CastUtility::fromString<float>(engine.getResources().getTag("speed")) + ((speedIncrease / 100) * initialSpeed);
+			Commands::inputCommand("setspeed " + CastUtility::toString(curSpeed), engine.getWorldR(), player, engine.getDefaultShader());
+			LogUtility::message("Speed increased by ", speedIncrease, "% of original capability!");
+			engine.getResources().update();
 		}
 	break;
 	case 5:
@@ -143,6 +144,11 @@ int main()
 
 	AudioMusic music(engine.getProperties().getTag("music_path"));
 	music.play();
+	
+	float initialSpeed = CastUtility::fromString<float>(engine.getProperties().getTag("initial_speed"));
+	Commands::inputCommand("setspeed " + CastUtility::toString(initialSpeed), engine.getWorldR(), player, engine.getDefaultShader());
+	engine.getResources().update();
+	
 	unsigned int level = 1;
 	unsigned int lives = 5;
 	LogUtility::message("Beginning asteroid generation...");
@@ -181,14 +187,15 @@ int main()
 				if(isTorpedo(other_eo, engine) && !isTorpedo(eo, engine))
 				{
 					// other_eo needs to despawn and break eo
-					LogUtility::message("PEW!");
 					score += 10;
 					engine.getWorldR().getEntityObjectsR().erase(engine.getWorldR().getEntityObjectsR().begin() + j);
 					engine.getWorldR().getEntityObjectsR().erase(engine.getWorldR().getEntityObjectsR().begin() + i);
 					Vector3F dir = eo.getVelocity().cross(other_eo.getVelocity()) * 0.005;
 					EntityObject daughter1(eo), daughter2(eo);
 					daughter1.setVelocity(dir);
+					daughter1.getScaleR() = daughter1.getScale() / 2;
 					daughter2.setVelocity(dir * -1);
+					daughter2.getScaleR() = daughter2.getScale() / 2;
 					engine.getWorldR().addEntityObject(daughter1);
 					engine.getWorldR().addEntityObject(daughter2);
 				}
@@ -218,7 +225,7 @@ int main()
 			if((obj.getPosition() - player.getPosition()).length() < (obj.getScale().getX()))
 			{
 				engine.getWorldR().getObjectsR().erase(engine.getWorldR().getObjectsR().begin() + i);
-				consumePowerup(level, score, lives, player, engine);
+				consumePowerup(level, score, lives, initialSpeed, player, engine);
 				Commands::inputCommand("play powerup.wav me", engine.getWorldR(), player, engine.getDefaultShader());
 			}
 		}
