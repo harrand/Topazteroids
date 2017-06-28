@@ -1,4 +1,5 @@
 resources: ../../../res/runtime/resources.data
+controls: ../../../res/runtime/controls.data
 default_world: asteroids.world
 default_shader: ../../../res/runtime/shaders/asteroids
 music_path: ../../../res/runtime/music/asteroids.wav
@@ -26,3 +27,5 @@ shoot_keybind: F
 torpedo_size: 30
 # Speed of a torpedo projectile
 torpedo_speed: 50000
+# Testing purposes - spawns powerup at your location
+dev_powerup_keybind: P

@@ -73,7 +73,7 @@ void consumePowerup(unsigned int& level, unsigned int& score, unsigned int& live
 		{
 			float speedIncrease = CastUtility::fromString<float>(engine.getProperties().getTag("speed_increase"));
 			float curSpeed = CastUtility::fromString<float>(engine.getResources().getTag("speed")) + ((speedIncrease / 100) * initialSpeed);
-			Commands::inputCommand("setspeed " + CastUtility::toString(curSpeed), engine.getWorldR(), player, engine.getDefaultShader());
+			Commands::inputCommand("setspeed " + CastUtility::toString(curSpeed), engine.getProperties().getTag("resources"), engine.getWorldR(), player, engine.getDefaultShader());
 			LogUtility::message("Speed increased by ", speedIncrease, "% of original capability!");
 			engine.getResources().update();
 		}
@@ -146,7 +146,7 @@ int main()
 	music.play();
 	
 	float initialSpeed = CastUtility::fromString<float>(engine.getProperties().getTag("initial_speed"));
-	Commands::inputCommand("setspeed " + CastUtility::toString(initialSpeed), engine.getWorldR(), player, engine.getDefaultShader());
+	Commands::inputCommand("setspeed " + CastUtility::toString(initialSpeed), engine.getProperties().getTag("resources"), engine.getWorldR(), player, engine.getDefaultShader());
 	engine.getResources().update();
 	
 	unsigned int level = 1;
@@ -176,6 +176,8 @@ int main()
 		engine.update(shader_id, mc, kc);
 		if(kl.catchKeyPressed(engine.getProperties().getTag("shoot_keybind")))
 			spawnTorpedo(player, engine);
+		if(kl.catchKeyPressed(engine.getProperties().getTag("dev_powerup_keybind")))
+			spawnPowerup(player, engine, asteroid_dispersion);
 		for(std::size_t i = 0; i < engine.getWorld().getEntityObjects().size(); i++)
 		{
 			EntityObject eo = engine.getWorldR().getEntityObjectsR().at(i);
@@ -202,7 +204,7 @@ int main()
 			}
 			if((eo.getPosition() - player.getPosition()).length() < (eo.getScale().getX()) && player.getForces().find("impact") == player.getForces().end() && !isTorpedo(eo, engine))
 			{
-				Commands::inputCommand("play noise.wav me", engine.getWorldR(), player, engine.getDefaultShader());
+				Commands::inputCommand("play ../../../res/runtime/music/noise.wav me", engine.getProperties().getTag("resources"), engine.getWorldR(), player, engine.getDefaultShader());
 				player.applyForce("impact", eo.getPosition() - player.getPosition());
 				std::function<void(std::reference_wrapper<Player> p)> undoImpact([](Player& p)->void{p.removeForce("impact");});
 				Scheduler::asyncDelayedTask<void, std::reference_wrapper<Player>>(5000, undoImpact, std::ref(player));
@@ -226,7 +228,7 @@ int main()
 			{
 				engine.getWorldR().getObjectsR().erase(engine.getWorldR().getObjectsR().begin() + i);
 				consumePowerup(level, score, lives, initialSpeed, player, engine);
-				Commands::inputCommand("play powerup.wav me", engine.getWorldR(), player, engine.getDefaultShader());
+				Commands::inputCommand("play ../../../res/runtime/music/powerup.wav me", engine.getProperties().getTag("resources"), engine.getWorldR(), player, engine.getDefaultShader());
 			}
 		}
 		if(tk.millisPassed((500 * level) - score))

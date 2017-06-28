@@ -100,5 +100,5 @@ cube.path: ../../../res/runtime/models/cube.obj
 cube.name: Complete Cube
 sphere.path: ../../../res/runtime/models/sphere.obj
 sphere.name: Complete Sphere
-played: 335346
-speed: 2.065
+speed: 2.94
+played: 335986
