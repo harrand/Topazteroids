@@ -246,7 +246,7 @@ int main()
 			std::string lifeBar = "";
 			for(unsigned int i = 0; i < lives; i++)
 				lifeBar += "[] ";
-			wnd.setTitle("Asteroids | Level " + CastUtility::toString(level) + " | Ship Integrity: " + lifeBar);
+			wnd.setTitle("Asteroids | Level " + CastUtility::toString(level) + " | Score: " + CastUtility::toString(score) + " | Ship Integrity: " + lifeBar);
 		}
 	}
 	return 0;

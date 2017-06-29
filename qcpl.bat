@@ -7,7 +7,7 @@ set incdir=%cd%\inc
 set libdir=%cd%\lib
 echo Compiling Asteroids Source
 cd src
-g++ -c -std=c++14 -Wall -Wextra -pedantic-errors -O3 *.cpp -I "%incdir%"
+g++ -c -std=c++1z -Wall -Wextra -pedantic-errors -O3 *.cpp -I "%incdir%"
 echo Building Asteroids (via *.o)
 
 if not exist "%cpldir%" mkdir "%cpldir%"
