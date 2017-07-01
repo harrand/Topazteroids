@@ -6,11 +6,6 @@
 #include <fstream>
 #include <sstream>
 #include <map>
-/*
-	MDL - Minimalist Data Language
-	Written by Harry "Harrand" Hollands 2017. 
-	Designed for use with C++11 or newer to manipulate and read data in a simple and efficient manner.
-*/
 
 class RawFile
 {
@@ -20,7 +15,7 @@ public:
 	RawFile(RawFile&& move) = default;
 	RawFile& operator=(const RawFile& rhs) = default;
 	
-	std::string getPath() const;
+	const std::string& getPath() const;
 	std::vector<std::string> getLines() const;
 	std::string getData() const;
 	void clear() const;
@@ -33,12 +28,12 @@ private:
 class MDLF
 {
 public:
-	MDLF(const RawFile rf);
+	MDLF(RawFile rf);
 	MDLF(const MDLF& copy) = default;
 	MDLF(MDLF&& move) = default;
 	MDLF& operator=(const MDLF& rhs) = default;
 	
-	const RawFile getRawFile() const;
+	const RawFile& getRawFile() const;
 	void update() const;
 	bool existsTag(std::string tagName) const;
 	bool existsSequence(std::string sequenceName) const;
@@ -53,7 +48,7 @@ public:
 	std::map<std::string, std::string> getParsedTags() const;
 	std::map<std::string, std::vector<std::string>> getParsedSequences() const;
 private:
-	const RawFile rf;
+	RawFile rf;
 	mutable std::map<std::string, std::string> parsedTags;
 	mutable std::map<std::string, std::vector<std::string>> parsedSequences;
 	
@@ -64,6 +59,7 @@ private:
 	bool isSequence(std::string s) const;
 	bool isEndOfSequence(std::string s) const;
 	std::vector<std::string> getSequences(std::vector<std::string> lines, unsigned int index) const;
+	
 	void parse() const;
 };
 

@@ -1,4 +1,5 @@
 #include "engine.hpp"
+#include "listeners.hpp"
 #include <time.h>
 #include <stdlib.h>
 
@@ -35,8 +36,6 @@ void spawnPowerup(Player& player, Engine& engine, int asteroid_dispersion)
 	float powerup_size = CastUtility::fromString<float>(engine.getProperties().getTag("powerup_size"));
 	Object powerup(engine.getResources().getTag("sphere.path"), textures, player.getPosition() + Vector3F(rand() % (asteroid_dispersion * 2) - asteroid_dispersion, rand() % (asteroid_dispersion * 2) - asteroid_dispersion, rand() % (asteroid_dispersion * 2) - asteroid_dispersion), Vector3F(), Vector3F(powerup_size, powerup_size, powerup_size));
 	engine.getWorldR().addObject(powerup);
-	
-	LogUtility::message("Powerup spawned at location ", StringUtility::format(StringUtility::devectoriseList3<float>(powerup.getPosition())));
 }
 
 void consumePowerup(unsigned int& level, unsigned int& score, unsigned int& lives, float initialSpeed, Player& player, Engine& engine)
@@ -173,17 +172,22 @@ int main()
 	while(!wnd.isCloseRequested())
 	{
 		tk.update();
-		engine.update(shader_id, mc, kc);
+		engine.update(shader_id);
+		mc.handleMouse();
+		kc.handleKeybinds(engine.getTimeProfiler().getLastDelta(), engine.getProperties().getTag("resources"), engine.getProperties().getTag("controls"));
+		mc.getMouseListenerR().reloadMouseDelta();
 		if(kl.catchKeyPressed(engine.getProperties().getTag("shoot_keybind")))
 			spawnTorpedo(player, engine);
 		if(kl.catchKeyPressed(engine.getProperties().getTag("dev_powerup_keybind")))
 			spawnPowerup(player, engine, asteroid_dispersion);
 		for(std::size_t i = 0; i < engine.getWorld().getEntityObjects().size(); i++)
 		{
-			EntityObject eo = engine.getWorldR().getEntityObjectsR().at(i);
+			EntityObject& eo = engine.getWorldR().getEntityObjectsR().at(i);
+			if(eo.getVelocity().length() > (asteroid_max_speed) && !isTorpedo(eo, engine))
+				eo.setVelocity(eo.getVelocity().normalised() * asteroid_max_speed * level);
 			for(std::size_t j = 0; j < engine.getWorld().getEntityObjects().size(); j++)
 			{
-				EntityObject other_eo = engine.getWorldR().getEntityObjectsR().at(j);
+				EntityObject& other_eo = engine.getWorldR().getEntityObjectsR().at(j);
 				if(i == j || (eo.getPosition() - other_eo.getPosition()).length() > (eo.getScale().getX() + other_eo.getScale().getX()))
 					continue;
 				if(isTorpedo(other_eo, engine) && !isTorpedo(eo, engine))
@@ -192,14 +196,29 @@ int main()
 					score += 10;
 					engine.getWorldR().getEntityObjectsR().erase(engine.getWorldR().getEntityObjectsR().begin() + j);
 					engine.getWorldR().getEntityObjectsR().erase(engine.getWorldR().getEntityObjectsR().begin() + i);
-					Vector3F dir = eo.getVelocity().cross(other_eo.getVelocity()) * 0.005;
-					EntityObject daughter1(eo), daughter2(eo);
-					daughter1.setVelocity(dir);
-					daughter1.getScaleR() = daughter1.getScale() / 2;
-					daughter2.setVelocity(dir * -1);
-					daughter2.getScaleR() = daughter2.getScale() / 2;
-					engine.getWorldR().addEntityObject(daughter1);
-					engine.getWorldR().addEntityObject(daughter2);
+				}
+				else if(!isTorpedo(other_eo, engine) && !isTorpedo(eo, engine))
+				{
+					// two asteroids have collided, so inverse speeds to pretend to conserve momentum
+					Vector3F momentumA = eo.getVelocity() * eo.getScale().length();
+					Vector3F momentumB = other_eo.getVelocity() * other_eo.getScale().length();
+					Vector3F totalMomentum = momentumA + momentumB;
+					// smaller one will go opposite direction
+					bool a_bigger = eo.getScale().length() > other_eo.getScale().length();
+					if(a_bigger)
+					{
+						other_eo.setVelocity(other_eo.getVelocity() * -1);
+						Vector3F remainingMomentum = totalMomentum - (other_eo.getVelocity() * other_eo.getScale().length());
+						eo.setVelocity(remainingMomentum / eo.getScale().length());
+						eo.getPositionR() += eo.getVelocity().normalised() * (eo.getScale().length() / 2);
+					}
+					else
+					{
+						eo.setVelocity(eo.getVelocity() * -1);
+						Vector3F remainingMomentum = totalMomentum - (eo.getVelocity() * eo.getScale().length());
+						other_eo.setVelocity(remainingMomentum / other_eo.getScale().length());
+						other_eo.getPositionR() += other_eo.getVelocity().normalised() * (other_eo.getScale().length() / 2);
+					}
 				}
 			}
 			if((eo.getPosition() - player.getPosition()).length() < (eo.getScale().getX()) && player.getForces().find("impact") == player.getForces().end() && !isTorpedo(eo, engine))
@@ -246,7 +265,7 @@ int main()
 			std::string lifeBar = "";
 			for(unsigned int i = 0; i < lives; i++)
 				lifeBar += "[] ";
-			wnd.setTitle("Asteroids | Level " + CastUtility::toString(level) + " | Score: " + CastUtility::toString(score) + " | Ship Integrity: " + lifeBar);
+			wnd.setTitle("Asteroids | Level " + CastUtility::toString(level) + " | Score: " + CastUtility::toString(score) + " | Ship Integrity: " + lifeBar + " | FPS: " + CastUtility::toString(engine.getFPS()));
 		}
 	}
 	return 0;
