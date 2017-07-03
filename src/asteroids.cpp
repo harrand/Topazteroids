@@ -1,131 +1,20 @@
 #include "engine.hpp"
 #include "listeners.hpp"
-#include <time.h>
-#include <stdlib.h>
 
-void spawnTorpedo(Player& player, Engine& engine)
-{
-	std::vector<std::pair<std::string, Texture::TextureType>> textures;
-	textures.push_back(std::make_pair(engine.getResources().getTag("torpedo.path"), Texture::TextureType::TEXTURE));
-	textures.push_back(std::make_pair(engine.getResources().getTag("stone_normalmap.path"), Texture::TextureType::NORMAL_MAP));
-	textures.push_back(std::make_pair(engine.getResources().getTag("stone_parallaxmap.path"), Texture::TextureType::PARALLAX_MAP));
-	textures.push_back(std::make_pair(engine.getResources().getTag("default_displacementmap.path"), Texture::TextureType::DISPLACEMENT_MAP));
-	float torpedo_size = CastUtility::fromString<float>(engine.getProperties().getTag("torpedo_size"));
-	EntityObject torpedo(engine.getResources().getTag("sphere.path"), textures, 10, player.getPosition(), Vector3F(), Vector3F(torpedo_size, torpedo_size, torpedo_size));
-	torpedo.applyForce("shoot", Force(player.getCamera().getForward() * CastUtility::fromString<float>(engine.getProperties().getTag("torpedo_speed"))));
-	engine.getWorldR().addEntityObject(torpedo);
-}
+void spawnTorpedo(Player& player, Engine& engine);
+bool isTorpedo(const EntityObject& eo, const Engine& engine);
+void spawnPowerup(Player& player, Engine& engine, int asteroid_dispersion, Random& random);
+void consumePowerup(unsigned int& level, unsigned int& score, unsigned int& lives, float initialSpeed, Player& player, Engine& engine, Random& random);
+void spawnAsteroid(Player& player, Engine& engine, unsigned int level, int asteroid_dispersion, int asteroid_max_speed, unsigned int asteroid_size, Random& random);
 
-bool isTorpedo(const EntityObject& eo, const Engine& engine)
-{
-	for(auto pair : eo.getTextures())
-	{
-		if(pair.second == Texture::TextureType::TEXTURE && pair.first == engine.getResources().getTag("torpedo.path"))
-			return true;
-	}
-	return false;
-}
 
-void spawnPowerup(Player& player, Engine& engine, int asteroid_dispersion)
-{	
-	std::vector<std::pair<std::string, Texture::TextureType>> textures;
-	textures.push_back(std::make_pair(engine.getResources().getTag("undefined.path"), Texture::TextureType::TEXTURE));
-	textures.push_back(std::make_pair(engine.getResources().getTag("default_normalmap.path"), Texture::TextureType::NORMAL_MAP));
-	textures.push_back(std::make_pair(engine.getResources().getTag("default_parallaxmap.path"), Texture::TextureType::PARALLAX_MAP));
-	textures.push_back(std::make_pair(engine.getResources().getTag("default_displacementmap.path"), Texture::TextureType::DISPLACEMENT_MAP));
-	float powerup_size = CastUtility::fromString<float>(engine.getProperties().getTag("powerup_size"));
-	Object powerup(engine.getResources().getTag("sphere.path"), textures, player.getPosition() + Vector3F(rand() % (asteroid_dispersion * 2) - asteroid_dispersion, rand() % (asteroid_dispersion * 2) - asteroid_dispersion, rand() % (asteroid_dispersion * 2) - asteroid_dispersion), Vector3F(), Vector3F(powerup_size, powerup_size, powerup_size));
-	engine.getWorldR().addObject(powerup);
-}
-
-void consumePowerup(unsigned int& level, unsigned int& score, unsigned int& lives, float initialSpeed, Player& player, Engine& engine)
-{
-	switch(rand() % 6)
-	{
-	case 0:
-		lives++;
-		LogUtility::message("You gained a life!");
-	break;
-	case 1:
-		for(EntityObject& eo : engine.getWorldR().getEntityObjectsR())
-			eo.getScaleR() = eo.getScale() / 2;
-		LogUtility::message("Halved the size of all asteroids!");
-	break;
-	case 2:
-		player.applyForce("impact", Force());
-		LogUtility::message("Immune to damage for 5 seconds!");
-		{
-		std::function<void(std::reference_wrapper<Player> p)> undoImpact([](Player& p)->void{p.removeForce("impact");});
-		Scheduler::asyncDelayedTask<void, std::reference_wrapper<Player>>(5000, undoImpact, std::ref(player));
-		}
-	break;
-	case 3:
-		for(EntityObject& eo : engine.getWorldR().getEntityObjectsR())
-		{
-			for(auto pair : eo.getForces())
-				eo.removeForce(pair.first);
-			eo.applyForce("pulse", Force((eo.getPosition() - player.getPosition()).normalised() * CastUtility::fromString<float>(engine.getProperties().getTag("pulse_force"))));
-		}
-		LogUtility::message("Force Pulse! All asteroids pushed away!");
-	break;
-	case 4:
-		{
-			float speedIncrease = CastUtility::fromString<float>(engine.getProperties().getTag("speed_increase"));
-			float curSpeed = CastUtility::fromString<float>(engine.getResources().getTag("speed")) + ((speedIncrease / 100) * initialSpeed);
-			Commands::inputCommand("setspeed " + CastUtility::toString(curSpeed), engine.getProperties().getTag("resources"), engine.getWorldR(), player, engine.getDefaultShader());
-			LogUtility::message("Speed increased by ", speedIncrease, "% of original capability!");
-			engine.getResources().update();
-		}
-	break;
-	case 5:
-		level++;
-		score += 500;
-		LogUtility::message("Gained 500 score, moving you to the next level!");
-	break;
-	}
-}
-
-void spawnAsteroid(Player& player, Engine& engine, unsigned int level, int asteroid_dispersion, int asteroid_max_speed, unsigned int asteroid_size)
-{
-	std::vector<std::pair<std::string, Texture::TextureType>> textures;
-	switch(rand() % 3)
-	{
-	case 0:
-		textures.push_back(std::make_pair(engine.getResources().getTag("lava.path"), Texture::TextureType::TEXTURE));
-		textures.push_back(std::make_pair(engine.getResources().getTag("lava_normalmap.path"), Texture::TextureType::NORMAL_MAP));
-		textures.push_back(std::make_pair(engine.getResources().getTag("lava_parallaxmap.path"), Texture::TextureType::PARALLAX_MAP));
-		textures.push_back(std::make_pair(engine.getResources().getTag("default_displacementmap.path"), Texture::TextureType::DISPLACEMENT_MAP));
-	break;
-	case 1:
-		textures.push_back(std::make_pair(engine.getResources().getTag("sand.path"), Texture::TextureType::TEXTURE));
-		textures.push_back(std::make_pair(engine.getResources().getTag("sand_normalmap.path"), Texture::TextureType::NORMAL_MAP));
-		textures.push_back(std::make_pair(engine.getResources().getTag("sand_parallaxmap.path"), Texture::TextureType::PARALLAX_MAP));
-		textures.push_back(std::make_pair(engine.getResources().getTag("default_displacementmap.path"), Texture::TextureType::DISPLACEMENT_MAP));
-	break;
-	default:
-		textures.push_back(std::make_pair(engine.getResources().getTag("metal.path"), Texture::TextureType::TEXTURE));
-		textures.push_back(std::make_pair(engine.getResources().getTag("metal_normalmap.path"), Texture::TextureType::NORMAL_MAP));
-		textures.push_back(std::make_pair(engine.getResources().getTag("metal_parallaxmap.path"), Texture::TextureType::PARALLAX_MAP));
-		textures.push_back(std::make_pair(engine.getResources().getTag("default_displacementmap.path"), Texture::TextureType::DISPLACEMENT_MAP));
-	break;
-	}
-	
-	EntityObject asteroid(engine.getResources().getTag("sphere.path"), textures, 10, player.getPosition() + Vector3F(rand() % (asteroid_dispersion * 2) - asteroid_dispersion, rand() % (asteroid_dispersion * 2) - asteroid_dispersion, rand() % (asteroid_dispersion * 2) - asteroid_dispersion), Vector3F(), Vector3F(asteroid_size, asteroid_size, asteroid_size) * (level == 1 ? level : (rand() % (level - 1) + 1)));
-	asteroid.applyForce("motion", Force(Vector3F(rand() % (asteroid_max_speed * 2) - asteroid_max_speed, rand() % (asteroid_max_speed * 2) - asteroid_max_speed, rand() % (asteroid_max_speed * 2) - asteroid_max_speed) * level));
-	asteroid.applyForce("chase", Force((asteroid.getPosition() - player.getPosition()).normalised() * pow(level, 1.5) * -CastUtility::fromString<float>(engine.getProperties().getTag("asteroid_chase_multiplier"))));
-	// Don't spawn unfairly close
-	if((asteroid.getPosition() - player.getPosition()).length() > (asteroid.getScale().getX() * 2))
-		engine.getWorldR().addEntityObject(asteroid);
-	else
-		spawnAsteroid(player, engine, level, asteroid_dispersion, asteroid_max_speed, asteroid_size);
-}
 
 #ifdef main
 #undef main
 #endif
 int main()
 {	
-	srand(time(NULL));
+	Random random;
 	LogUtility::message("Initialising camera, player and window...");
 	Camera cam;
 	Player player(10, cam);
@@ -163,7 +52,7 @@ int main()
 	for(unsigned int i = 0; i < asteroids; i++)
 	{
 		//Player& player, Engine& engine, unsigned int level, int asteroid_dispersion, int asteroid_max_speed, unsigned int asteroid_size
-		spawnAsteroid(player, engine, level, asteroid_dispersion, asteroid_max_speed, asteroid_size);
+		spawnAsteroid(player, engine, level, asteroid_dispersion, asteroid_max_speed, asteroid_size, random);
 	}
 	LogUtility::message("Asteroids are near you, DON'T CRASH!");
 	
@@ -179,7 +68,7 @@ int main()
 		if(kl.catchKeyPressed(engine.getProperties().getTag("shoot_keybind")))
 			spawnTorpedo(player, engine);
 		if(kl.catchKeyPressed(engine.getProperties().getTag("dev_powerup_keybind")))
-			spawnPowerup(player, engine, asteroid_dispersion);
+			spawnPowerup(player, engine, asteroid_dispersion, random);
 		for(std::size_t i = 0; i < engine.getWorld().getEntityObjects().size(); i++)
 		{
 			EntityObject& eo = engine.getWorldR().getEntityObjectsR().at(i);
@@ -246,15 +135,15 @@ int main()
 			if((obj.getPosition() - player.getPosition()).length() < (obj.getScale().getX()))
 			{
 				engine.getWorldR().getObjectsR().erase(engine.getWorldR().getObjectsR().begin() + i);
-				consumePowerup(level, score, lives, initialSpeed, player, engine);
+				consumePowerup(level, score, lives, initialSpeed, player, engine, random);
 				Commands::inputCommand("play ../../../res/runtime/music/powerup.wav me", engine.getProperties().getTag("resources"), engine.getWorldR(), player, engine.getDefaultShader());
 			}
 		}
 		if(tk.millisPassed((500 * level) - score))
 		{
-			if(rand() % 5 == 1)
-				spawnPowerup(player, engine, asteroid_dispersion);
-			spawnAsteroid(player, engine, level, asteroid_dispersion, asteroid_max_speed, asteroid_size);
+			if(random(1, 5) == 1)
+				spawnPowerup(player, engine, asteroid_dispersion, random);
+			spawnAsteroid(player, engine, level, asteroid_dispersion, asteroid_max_speed, asteroid_size, random);
 			tk.reload();
 			score += 5;
 			if(score >= (500 * level))
@@ -269,4 +158,121 @@ int main()
 		}
 	}
 	return 0;
+}
+
+void spawnTorpedo(Player& player, Engine& engine)
+{
+	std::vector<std::pair<std::string, Texture::TextureType>> textures;
+	textures.push_back(std::make_pair(engine.getResources().getTag("torpedo.path"), Texture::TextureType::TEXTURE));
+	textures.push_back(std::make_pair(engine.getResources().getTag("stone_normalmap.path"), Texture::TextureType::NORMAL_MAP));
+	textures.push_back(std::make_pair(engine.getResources().getTag("stone_parallaxmap.path"), Texture::TextureType::PARALLAX_MAP));
+	textures.push_back(std::make_pair(engine.getResources().getTag("default_displacementmap.path"), Texture::TextureType::DISPLACEMENT_MAP));
+	float torpedo_size = CastUtility::fromString<float>(engine.getProperties().getTag("torpedo_size"));
+	EntityObject torpedo(engine.getResources().getTag("sphere.path"), textures, 10, player.getPosition(), Vector3F(), Vector3F(torpedo_size, torpedo_size, torpedo_size));
+	torpedo.applyForce("shoot", Force(player.getCamera().getForward() * CastUtility::fromString<float>(engine.getProperties().getTag("torpedo_speed"))));
+	engine.getWorldR().addEntityObject(torpedo);
+}
+
+bool isTorpedo(const EntityObject& eo, const Engine& engine)
+{
+	for(auto pair : eo.getTextures())
+	{
+		if(pair.second == Texture::TextureType::TEXTURE && pair.first == engine.getResources().getTag("torpedo.path"))
+			return true;
+	}
+	return false;
+}
+
+void spawnPowerup(Player& player, Engine& engine, int asteroid_dispersion, Random& random)
+{	
+	std::vector<std::pair<std::string, Texture::TextureType>> textures;
+	textures.push_back(std::make_pair(engine.getResources().getTag("undefined.path"), Texture::TextureType::TEXTURE));
+	textures.push_back(std::make_pair(engine.getResources().getTag("default_normalmap.path"), Texture::TextureType::NORMAL_MAP));
+	textures.push_back(std::make_pair(engine.getResources().getTag("default_parallaxmap.path"), Texture::TextureType::PARALLAX_MAP));
+	textures.push_back(std::make_pair(engine.getResources().getTag("default_displacementmap.path"), Texture::TextureType::DISPLACEMENT_MAP));
+	float powerup_size = CastUtility::fromString<float>(engine.getProperties().getTag("powerup_size"));
+	Object powerup(engine.getResources().getTag("sphere.path"), textures, player.getPosition() + Vector3F(random.operator()<int>(-asteroid_dispersion, asteroid_dispersion), random.operator()<int>(-asteroid_dispersion, asteroid_dispersion), random.operator()<int>(-asteroid_dispersion, asteroid_dispersion)), Vector3F(), Vector3F(powerup_size, powerup_size, powerup_size));
+	engine.getWorldR().addObject(powerup);
+}
+
+void consumePowerup(unsigned int& level, unsigned int& score, unsigned int& lives, float initialSpeed, Player& player, Engine& engine, Random& random)
+{
+	switch(random(0, 6))
+	{
+	case 0:
+		lives++;
+		LogUtility::message("You gained a life!");
+	break;
+	case 1:
+		for(EntityObject& eo : engine.getWorldR().getEntityObjectsR())
+			eo.getScaleR() = eo.getScale() / 2;
+		LogUtility::message("Halved the size of all asteroids!");
+	break;
+	case 2:
+		player.applyForce("impact", Force());
+		LogUtility::message("Immune to damage for 5 seconds!");
+		{
+		std::function<void(std::reference_wrapper<Player> p)> undoImpact([](Player& p)->void{p.removeForce("impact");});
+		Scheduler::asyncDelayedTask<void, std::reference_wrapper<Player>>(5000, undoImpact, std::ref(player));
+		}
+	break;
+	case 3:
+		for(EntityObject& eo : engine.getWorldR().getEntityObjectsR())
+		{
+			for(auto pair : eo.getForces())
+				eo.removeForce(pair.first);
+			eo.applyForce("pulse", Force((eo.getPosition() - player.getPosition()).normalised() * CastUtility::fromString<float>(engine.getProperties().getTag("pulse_force"))));
+		}
+		LogUtility::message("Force Pulse! All asteroids pushed away!");
+	break;
+	case 4:
+		{
+			float speedIncrease = CastUtility::fromString<float>(engine.getProperties().getTag("speed_increase"));
+			float curSpeed = CastUtility::fromString<float>(engine.getResources().getTag("speed")) + ((speedIncrease / 100) * initialSpeed);
+			Commands::inputCommand("setspeed " + CastUtility::toString(curSpeed), engine.getProperties().getTag("resources"), engine.getWorldR(), player, engine.getDefaultShader());
+			LogUtility::message("Speed increased by ", speedIncrease, "% of original capability!");
+			engine.getResources().update();
+		}
+	break;
+	case 5:
+		level++;
+		score += 500;
+		LogUtility::message("Gained 500 score, moving you to the next level!");
+	break;
+	}
+}
+
+void spawnAsteroid(Player& player, Engine& engine, unsigned int level, int asteroid_dispersion, int asteroid_max_speed, unsigned int asteroid_size, Random& random)
+{
+	std::vector<std::pair<std::string, Texture::TextureType>> textures;
+	switch(random(0, 3))
+	{
+	case 0:
+		textures.push_back(std::make_pair(engine.getResources().getTag("lava.path"), Texture::TextureType::TEXTURE));
+		textures.push_back(std::make_pair(engine.getResources().getTag("lava_normalmap.path"), Texture::TextureType::NORMAL_MAP));
+		textures.push_back(std::make_pair(engine.getResources().getTag("lava_parallaxmap.path"), Texture::TextureType::PARALLAX_MAP));
+		textures.push_back(std::make_pair(engine.getResources().getTag("default_displacementmap.path"), Texture::TextureType::DISPLACEMENT_MAP));
+	break;
+	case 1:
+		textures.push_back(std::make_pair(engine.getResources().getTag("sand.path"), Texture::TextureType::TEXTURE));
+		textures.push_back(std::make_pair(engine.getResources().getTag("sand_normalmap.path"), Texture::TextureType::NORMAL_MAP));
+		textures.push_back(std::make_pair(engine.getResources().getTag("sand_parallaxmap.path"), Texture::TextureType::PARALLAX_MAP));
+		textures.push_back(std::make_pair(engine.getResources().getTag("default_displacementmap.path"), Texture::TextureType::DISPLACEMENT_MAP));
+	break;
+	default:
+		textures.push_back(std::make_pair(engine.getResources().getTag("metal.path"), Texture::TextureType::TEXTURE));
+		textures.push_back(std::make_pair(engine.getResources().getTag("metal_normalmap.path"), Texture::TextureType::NORMAL_MAP));
+		textures.push_back(std::make_pair(engine.getResources().getTag("metal_parallaxmap.path"), Texture::TextureType::PARALLAX_MAP));
+		textures.push_back(std::make_pair(engine.getResources().getTag("default_displacementmap.path"), Texture::TextureType::DISPLACEMENT_MAP));
+	break;
+	}
+	
+	EntityObject asteroid(engine.getResources().getTag("sphere.path"), textures, 10, player.getPosition() + Vector3F(random.operator()<int>(-asteroid_dispersion, asteroid_dispersion), random.operator()<int>(-asteroid_dispersion, asteroid_dispersion), random.operator()<int>(-asteroid_dispersion, asteroid_dispersion)), Vector3F(), Vector3F(asteroid_size, asteroid_size, asteroid_size) * (level == 1 ? level : random.operator()<int>(1, level)));
+	asteroid.applyForce("motion", Force(Vector3F(random.operator()<int>(-asteroid_max_speed, asteroid_max_speed), random.operator()<int>(-asteroid_max_speed, asteroid_max_speed), random.operator()<int>(-asteroid_max_speed, asteroid_max_speed)) * level));
+	asteroid.applyForce("chase", Force((asteroid.getPosition() - player.getPosition()).normalised() * pow(level, 1.5) * -CastUtility::fromString<float>(engine.getProperties().getTag("asteroid_chase_multiplier"))));
+	// Don't spawn unfairly close
+	if((asteroid.getPosition() - player.getPosition()).length() > (asteroid.getScale().getX() * 2))
+		engine.getWorldR().addEntityObject(asteroid);
+	else
+		spawnAsteroid(player, engine, level, asteroid_dispersion, asteroid_max_speed, asteroid_size, random);
 }
