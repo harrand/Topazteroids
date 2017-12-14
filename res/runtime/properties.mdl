@@ -5,13 +5,15 @@ default_gui_shader: ../../../res/runtime/shaders/gui
 music_path: ../../../res/runtime/music/asteroids.wav
 # Initial speed of ship
 initial_speed: 0.35
+# Recovery period length in milliseconds (time invincible after impact)
+recovery_period: 5000
 # Number of asteroids spawned when the game starts
 asteroids: 25
 # Size of the field in which an asteroid can spawn, decreases difficulty
-asteroid_dispersion: 2000
+asteroid_dispersion: 500
 # Maximum random force applied to an asteroid, decreases difficulty
-asteroid_max_speed: 100
-# Average size of an asteroid (will increase with level), increases difficulty
+asteroid_max_speed: 1000
+# Asteroid Max Size increment per level.
 asteroid_size: 75
 # Multiplier to the chase component of asteroid force, HUGELY increases difficulty
 asteroid_chase_multiplier: 50
@@ -21,11 +23,11 @@ powerup_size: 50
 pulse_force: 5000
 # Speed increase percentage
 speed_increase: 10
-# Key to shoot a torpedo
+# Key to shoot a shot
 shoot_keybind: F
-# Size of a torpedo projectile
-torpedo_size: 30
-# Speed of a torpedo projectile
-torpedo_speed: 50000
+# Size of a shot projectile
+shot_size: 30
+# Speed of a shot projectile
+shot_speed: 50000
 # Testing purposes - spawns powerup at your location
 dev_powerup_keybind: P
