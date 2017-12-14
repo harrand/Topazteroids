@@ -1,7 +1,7 @@
-resources: ../../../res/runtime/resources.data
-controls: ../../../res/runtime/controls.data
-default_world: asteroids.world
+resources: ../../../res/runtime/resources.mdl
+default_world: ../../../res/runtime/worlds/default_world.mdl
 default_shader: ../../../res/runtime/shaders/asteroids
+default_gui_shader: ../../../res/runtime/shaders/gui
 music_path: ../../../res/runtime/music/asteroids.wav
 # Initial speed of ship
 initial_speed: 0.35
