@@ -2,6 +2,7 @@
 #include "TZ/gui_display.hpp"
 
 void launch();
+bool will_collide(const Camera& camera, Vector3F motion, const std::vector<Asteroid>& asteroid_list);
 #ifdef main
 #undef main
 #endif
@@ -38,8 +39,12 @@ void launch()
 	engine.register_listener(mouse_listener);
 	
 	Font example_font("../../../res/runtime/fonts/upheaval.ttf", 25);
-	TextLabel text(0.0f, 0.0f, Vector4F(1, 1, 1, 1), {}, Vector3F(0, 0, 0), example_font, "Lives: {} {} {} {} {}", engine.default_gui_shader);
+	TextLabel text(0.0f, 0.0f, Vector4F(1, 1, 1, 1), {}, Vector3F(0, 0, 0), example_font, "Lives: x x x x x", engine.default_gui_shader);
+	TextLabel level_label(0.0f, game_window.get_height() - 50, Vector4F(1, 1, 1, 1), {}, Vector3F(0, 0, 0), example_font, "Level 1", engine.default_gui_shader);
+	TextLabel score_label(0.0f, game_window.get_height() - 50 - (level_label.get_height() * 2), Vector4F(1, 1, 1, 1), {}, Vector3F(0, 0, 0), example_font, "Score: 0", engine.default_gui_shader);
 	game_window.add_child(&text);
+	game_window.add_child(&level_label);
+	game_window.add_child(&score_label);
 	
 	asteroid_list.push_back({engine, Vector3F(), Vector3F(), Vector3F(10, 10, 10)});
 	
@@ -50,13 +55,33 @@ void launch()
 		if(engine.is_update_due())
 		{
 			if(key_listener.is_key_pressed("W"))
-				engine.camera.position += engine.camera.forward() * asteroids::speed;
+			{
+				if(will_collide(engine.camera, engine.camera.forward() * asteroids::speed, asteroid_list))
+					tz::util::log::message("DEUTSCHLAND");
+				else
+					engine.camera.position += engine.camera.forward() * asteroids::speed;
+			}
 			if(key_listener.is_key_pressed("S"))
-				engine.camera.position += engine.camera.backward() * asteroids::speed;
+			{
+				if(will_collide(engine.camera, engine.camera.backward() * asteroids::speed, asteroid_list))
+					tz::util::log::message("DEUTSCHLAND");
+				else
+					engine.camera.position += engine.camera.backward() * asteroids::speed;
+			}
 			if(key_listener.is_key_pressed("A"))
-				engine.camera.position += engine.camera.left() * asteroids::speed;
+			{
+				if(will_collide(engine.camera, engine.camera.left() * asteroids::speed, asteroid_list))
+					tz::util::log::message("DEUTSCHLAND");
+				else
+					engine.camera.position += engine.camera.left() * asteroids::speed;
+			}
 			if(key_listener.is_key_pressed("D"))
-				engine.camera.position += engine.camera.right() * asteroids::speed;
+			{
+				if(will_collide(engine.camera, engine.camera.right() * asteroids::speed, asteroid_list))
+					tz::util::log::message("DEUTSCHLAND");
+				else
+					engine.camera.position += engine.camera.right() * asteroids::speed;
+			}
 			if(mouse_listener.is_left_clicked())
 			{
 				Vector2F delta = mouse_listener.get_mouse_delta_pos();
@@ -66,4 +91,17 @@ void launch()
 			}
 		}
 	}
+}
+
+bool will_collide(const Camera& camera, Vector3F motion, const std::vector<Asteroid>& asteroid_list)
+{
+	bool ret = false;
+	for(const auto& asteroid : asteroid_list)
+	{
+		Vector3F future = camera.position + motion;
+		BoundingSphere future_boundary(future, 0.1f);
+		if(future_boundary.intersects(asteroid.boundary()))
+			ret = true;
+	}
+	return ret;
 }
