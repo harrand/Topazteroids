@@ -7,8 +7,6 @@ class Asteroid : public EntityObject
 public:
 	Asteroid(const Engine& engine, Vector3F position, Vector3F rotation, Vector3F scale);
 	BoundingSphere boundary() const;
-private:
-	const Engine& engine;
 };
 
 #endif

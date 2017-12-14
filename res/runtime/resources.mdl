@@ -7,7 +7,8 @@ textures: %[
 - sand
 - wood
 - stone
-- birch]%
+- birch
+- torpedo]%
 undefined.path: ../../../res/runtime/textures/undefined.jpg
 undefined.name: Undefined Texture
 bricks.path: ../../../res/runtime/textures/bricks.jpg
@@ -26,6 +27,8 @@ stone.path: ../../../res/runtime/textures/stone.jpg
 stone.name: Copyrighted Stone Texture
 birch.path: ../../../res/runtime/textures/birch.jpg
 birch.name: Copyrighted Birch Texture
+torpedo.path: ../../../res/runtime/textures/torpedo.png
+torpedo.name: Torpedo Texture
 normalmaps: %[
 - default_normalmap
 - bricks_normalmap
