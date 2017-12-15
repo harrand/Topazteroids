@@ -11,7 +11,7 @@ void spawn_powerup(const Engine& engine, Random<>& random, const Camera& camera,
 void shoot(const Engine& engine, const Camera& camera, bool& just_shot, std::vector<Shot>& shot_list);
 void spawn_asteroid_within_range(const Engine& engine, Random<>& random, const Camera& camera, std::vector<Asteroid>& asteroid_list);
 void die(std::vector<Asteroid>& asteroid_list, std::vector<Shot>& shot_list, TextLabel& game_over_label);
-void consume_powerup(const Engine& engine, Random<>& random, Camera& camera, std::vector<Asteroid>& asteroid_list, std::vector<Shot>& shot_list);
+std::string consume_powerup(const Engine& engine, Random<>& random, Camera& camera, std::vector<Asteroid>& asteroid_list, std::vector<Shot>& shot_list);
 void cleanup(const Camera& camera, std::vector<Asteroid>& asteroid_list, std::vector<Shot>& shot_list);
 #ifdef main
 #undef main
@@ -112,12 +112,14 @@ void launch()
 	
 	Font example_font("../../../res/runtime/fonts/upheaval.ttf", 25);
 	TextLabel lives_label(0.0f, 0.0f, Vector4F(1, 1, 1, 1), {}, Vector3F(0, 0, 0), example_font, "Lives: x x x x x", engine.default_gui_shader);
+	TextLabel powerup_label(0.0f, lives_label.get_height() * 2, Vector4F(1, 1, 1, 1), {}, Vector3F(0, 0, 0), example_font, " ", engine.default_gui_shader);
 	TextLabel level_label(0.0f, game_window.get_height() - 50, Vector4F(1, 1, 1, 1), {}, Vector3F(0, 0, 0), example_font, "Level 1", engine.default_gui_shader);
 	TextLabel score_label(0.0f, game_window.get_height() - 50 - (level_label.get_height() * 2), Vector4F(1, 1, 1, 1), {}, Vector3F(0, 0, 0), example_font, "Score: 0", engine.default_gui_shader);
 	TextLabel streak_label(0.0f, game_window.get_height() - 50 - (level_label.get_height() * 2) - (score_label.get_height() * 2), Vector4F(1, 1, 1, 1), {}, Vector3F(0, 0, 0), example_font, "0", engine.default_gui_shader);
 	TextLabel game_over_text(game_window.get_width() / 2, game_window.get_height() / 2, Vector4F(1, 0, 0, 1), {}, Vector3F(0, 0, 0), example_font, "Game Over!", engine.default_gui_shader);
 	game_over_text.set_hidden(true);
 	game_window.add_child(&lives_label);
+	game_window.add_child(&powerup_label);
 	game_window.add_child(&level_label);
 	game_window.add_child(&score_label);
 	game_window.add_child(&streak_label);
@@ -164,7 +166,7 @@ void launch()
 				if(player_boundary.intersects(iter->boundary()))
 				{
 					//const Engine& engine, Random<>& random, Camera& camera, std::vector<Asteroid>& asteroid_list, std::vector<Shot>& shot_list
-					consume_powerup(engine, random, engine.camera, asteroid_list, shot_list);
+					powerup_label.set_text(consume_powerup(engine, random, engine.camera, asteroid_list, shot_list));
 					iter = powerup_list.erase(iter);
 					if(iter == powerup_list.end())
 						break;
@@ -282,7 +284,10 @@ void spawn_asteroid_within_range(const Engine& engine, Random<>& random, const C
 	const float asteroid_max_speed = tz::util::cast::from_string<float>(engine.get_properties().get_tag("asteroid_max_speed"));
 	auto value_ranged = [&]()->float{return random.next_float(asteroids::asteroid_dispersion / -2.0f, asteroids::asteroid_dispersion / 2.0f);};
 	Vector3F position_offset = Vector3F(value_ranged(), value_ranged(), value_ranged()) + camera.position;
-	asteroid_list.emplace_back(engine, position_offset, Vector3F(), asteroids::initial_asteroid_scale * random.next_float(0.01, 1.0) * asteroids::level * asteroids::level);
+	// ensure position_offset is at least a certain distance away from the player
+	position_offset += (position_offset - camera.position).normalised() * (asteroids::asteroid_dispersion);
+	// position offset always has at least half the max distance away from the camera.
+	asteroid_list.emplace_back(engine, position_offset, Vector3F(), asteroids::initial_asteroid_scale * random.next_float(0.25, 1.0) * asteroids::level * asteroids::level);
 	asteroid_list.back().velocity = Vector3F(random.next_float(-1, 1), random.next_float(-1, 1), random.next_float(-1, 1));
 	asteroid_list.back().velocity += (camera.position - asteroid_list.back().position) * asteroids::chase_multiplier * std::sqrt(std::sqrt(asteroids::level));
 	asteroid_list.back().velocity = asteroid_list.back().velocity.normalised() * asteroid_max_speed * std::sqrt(asteroids::level);
@@ -296,41 +301,44 @@ void die(std::vector<Asteroid>& asteroid_list, std::vector<Shot>& shot_list, Tex
 	game_over_label.set_hidden(false);
 }
 
-void consume_powerup(const Engine& engine, Random<>& random, Camera& camera, std::vector<Asteroid>& asteroid_list, std::vector<Shot>& shot_list)
+std::string consume_powerup(const Engine& engine, Random<>& random, Camera& camera, std::vector<Asteroid>& asteroid_list, std::vector<Shot>& shot_list)
 {
+	std::string message;
 	tz::audio::play_clip_async(AudioClip("../../../res/runtime/music/powerup.wav"));
 	switch(random.next_int(0, 5))
 	{
 		case 0:
 			asteroids::player_speed += (asteroids::initial_player_speed * 0.75);
-			tz::util::log::message("Speed powerup! Speed is now ", asteroids::player_speed, "!");
+			message = "Speed";
 			break;
 		case 1:
 			for(auto& asteroid : asteroid_list)
 				asteroid.scale /= 2;
-			tz::util::log::message("Size powerup! Halved size of all asteroids!");
+			message = "Size";
 			break;
 		case 2:
 			asteroids::lives++;
-			tz::util::log::message("Life powerup! Gained one extra life!");
+			message = "Life";
 			break;
 		case 3:
 		{
-			tz::util::log::message("Gattling Gun powerup! Tenth shot delay for five seconds!");
+			message = "Gattling Gun";
 			asteroids::shot_period = asteroids::initial_shot_period / 10.0f;
 			TrivialFunctor shot_period_reset([&](){using namespace std::chrono_literals;std::this_thread::sleep_for(5000ms);asteroids::shot_period = asteroids::initial_shot_period;});
 			std::thread(shot_period_reset).detach();
 			break;
 		}
 		case 4:
-			tz::util::log::message("Force powerup! Pushing all asteroids away from you!");
+			message = "Force";
 			for(auto& asteroid : asteroid_list)
 				asteroid.velocity = (asteroid.position - camera.position).normalised() * asteroids::initial_player_speed * 1000;
 			break;
 		case 5:
-			tz::util::log::message("Level powerup! Skipping to level ", ++asteroids::level);
+			message = "Level";
+			asteroids::level++;
 			break;
 	}
+	return message;
 }
 
 void cleanup(const Camera& camera, std::vector<Asteroid>& asteroid_list, std::vector<Shot>& shot_list)
