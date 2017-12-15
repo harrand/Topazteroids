@@ -5,10 +5,10 @@
 void launch();
 bool will_collide(const Camera& camera, Vector3F motion, const std::vector<Asteroid>& asteroid_list);
 void impact(unsigned int recovery_period, unsigned int& lives, bool& just_impacted, std::vector<Asteroid>& asteroid_list, std::vector<Shot>& shot_list, TextLabel& game_over_label);
-void shoot(const Engine& engine, const Camera& camera, std::vector<Shot>& shot_list);
-void spawn_asteroid_within_range(const Engine& engine, Random<>& random, const Camera& camera, std::vector<Asteroid>& asteroid_list);
+void shoot(const Engine& engine, const Camera& camera, bool& just_shot, unsigned int shoot_period, std::vector<Shot>& shot_list);
+void spawn_asteroid_within_range(const Engine& engine, Random<>& random, const Camera& camera, std::vector<Asteroid>& asteroid_list, unsigned int level);
 void die(std::vector<Asteroid>& asteroid_list, std::vector<Shot>& shot_list, TextLabel& game_over_label);
-void cleanup(const Camera& camera, std::vector<Asteroid>& asteroid_list, std::vector<Shot>& shot_list);
+void cleanup(const Camera& camera, std::vector<Asteroid>& asteroid_list, std::vector<Shot>& shot_list, unsigned int& score);
 #ifdef main
 #undef main
 #endif
@@ -18,6 +18,7 @@ namespace asteroids
 	extern float player_speed;
 	extern unsigned int chase_multiplier;
 	extern bool game_over;
+	extern unsigned int shot_streak;
 	constexpr unsigned int culling_distance = 500;
 	constexpr unsigned int initial_level = 1;
 	constexpr unsigned int initial_score = 0;
@@ -41,19 +42,23 @@ int main()
 float asteroids::player_speed;
 unsigned int asteroids::chase_multiplier;
 bool asteroids::game_over;
+unsigned int asteroids::shot_streak;
 
 void launch()
 {
-	Window game_window(800, 600, "Asteroids");
+	Window game_window(800, 600, "Asteroids 3D");
 	Engine engine(&game_window, "../../../res/runtime/properties.mdl");
 	AudioMusic bgm("../../../res/runtime/music/asteroids.wav");
 	
 	unsigned int level = asteroids::initial_level, score = asteroids::initial_score, lives = asteroids::initial_lives;
 	bool just_impacted = false;
+	bool just_shot = false;
 	asteroids::player_speed = tz::util::cast::from_string<float>(MDLF(RawFile(engine.get_properties().get_tag("resources"))).get_tag("speed"));
 	const unsigned int recovery_period = tz::util::cast::from_string<unsigned int>(engine.get_properties().get_tag("recovery_period"));
+	const unsigned int shot_period = tz::util::cast::from_string<unsigned int>(engine.get_properties().get_tag("shot_period"));
 	asteroids::chase_multiplier = tz::util::cast::from_string<unsigned int>(engine.get_properties().get_tag("asteroid_chase_multiplier"));
 	asteroids::game_over = false;
+	asteroids::shot_streak = 0;
 	
 	bgm.play();
 	KeyListener key_listener;
@@ -78,11 +83,13 @@ void launch()
 	TextLabel lives_label(0.0f, 0.0f, Vector4F(1, 1, 1, 1), {}, Vector3F(0, 0, 0), example_font, "Lives: x x x x x", engine.default_gui_shader);
 	TextLabel level_label(0.0f, game_window.get_height() - 50, Vector4F(1, 1, 1, 1), {}, Vector3F(0, 0, 0), example_font, "Level 1", engine.default_gui_shader);
 	TextLabel score_label(0.0f, game_window.get_height() - 50 - (level_label.get_height() * 2), Vector4F(1, 1, 1, 1), {}, Vector3F(0, 0, 0), example_font, "Score: 0", engine.default_gui_shader);
+	TextLabel streak_label(0.0f, game_window.get_height() - 50 - (level_label.get_height() * 2) - (score_label.get_height() * 2), Vector4F(1, 1, 1, 1), {}, Vector3F(0, 0, 0), example_font, "0", engine.default_gui_shader);
 	TextLabel game_over_text(game_window.get_width() / 2, game_window.get_height() / 2, Vector4F(1, 1, 1, 1), {}, Vector3F(0, 0, 0), example_font, "Game Over!", engine.default_gui_shader);
 	game_over_text.set_hidden(true);
 	game_window.add_child(&lives_label);
 	game_window.add_child(&level_label);
 	game_window.add_child(&score_label);
+	game_window.add_child(&streak_label);
 	game_window.add_child(&game_over_text);
 	
 	float rotational_speed = tz::util::cast::from_string<float>(engine.get_resources().get_tag("rotational_speed"));
@@ -92,7 +99,7 @@ void launch()
 		engine.update(0);
 		if(asteroids::game_over)
 			continue;
-		cleanup(engine.camera, asteroid_list, shot_list);
+		cleanup(engine.camera, asteroid_list, shot_list, score);
 		if(seconds.millis_passed(1000))
 		{
 			score += 1;
@@ -102,13 +109,22 @@ void launch()
 			lives_label.set_text(lives_string);
 			level_label.set_text("Level " + tz::util::cast::to_string(level));
 			score_label.set_text("Score: " + tz::util::cast::to_string(score));
+			streak_label.set_text(tz::util::cast::to_string(asteroids::shot_streak));
+			if(asteroids::shot_streak >= 9)
+				streak_label.set_colour(Vector4F(1, 0, 0, 1));
+			else if(asteroids::shot_streak >= 5)
+				streak_label.set_colour(Vector4F(0.5, 0.5, 0, 1));
+			else if(asteroids::shot_streak >= 3)
+				streak_label.set_colour(Vector4F(0, 1, 0, 1));
+			else if(asteroids::shot_streak < 2)
+				streak_label.set_colour(Vector4F(1, 1, 1, 1));
 			seconds.reload();
 		}
 		seconds.update();
 		if(engine.is_update_due())
 		{
 			if(random.next_int(0, 2000) < 200)
-				spawn_asteroid_within_range(engine, random, engine.camera, asteroid_list);
+				spawn_asteroid_within_range(engine, random, engine.camera, asteroid_list, level);
 			if(key_listener.is_key_pressed("W"))
 			{
 				if(will_collide(engine.camera, engine.camera.forward() * asteroids::player_speed, asteroid_list))
@@ -151,8 +167,8 @@ void launch()
 				else
 					engine.camera.position += engine.camera.down() * asteroids::player_speed;
 			}
-			if(key_listener.catch_key_pressed("F"))
-				shoot(engine, engine.camera, shot_list);
+			if(key_listener.catch_key_pressed(tz::util::cast::to_string(engine.get_properties().get_tag("shoot_keybind"))))
+				shoot(engine, engine.camera, just_shot, shot_period, shot_list);
 			if(mouse_listener.is_left_clicked())
 			{
 				Vector2F delta = mouse_listener.get_mouse_delta_pos();
@@ -194,22 +210,28 @@ void impact(unsigned int recovery_period, unsigned int& lives, bool& just_impact
 	tz::audio::play_clip_async(AudioClip("../../../res/runtime/music/bang.wav"));
 }
 
-void shoot(const Engine& engine, const Camera& camera, std::vector<Shot>& shot_list)
+void shoot(const Engine& engine, const Camera& camera, bool& just_shot, unsigned int shoot_period, std::vector<Shot>& shot_list)
 {
+	if(just_shot)
+		return;
+	just_shot = true;
+	std::function<void(std::reference_wrapper<bool>)> set_shot_off = [](std::reference_wrapper<bool> just_shot)->void{just_shot.get() = false;};
+	tz::time::scheduler::async_delayed_task<void, std::reference_wrapper<bool>>(shoot_period, set_shot_off, std::ref(just_shot));
+	
 	shot_list.emplace_back(engine, camera.position, camera.rotation, asteroids::initial_shot_scale);
 	shot_list.back().velocity = camera.forward() * tz::util::cast::from_string<unsigned int>(engine.get_properties().get_tag("shot_speed"));
 	tz::audio::play_clip_async(AudioClip("../../../res/runtime/music/shoot.wav"));
 }
 
-void spawn_asteroid_within_range(const Engine& engine, Random<>& random, const Camera& camera, std::vector<Asteroid>& asteroid_list)
+void spawn_asteroid_within_range(const Engine& engine, Random<>& random, const Camera& camera, std::vector<Asteroid>& asteroid_list, unsigned int level)
 {
 	const float spread_radius = tz::util::cast::from_string<float>(engine.get_properties().get_tag("asteroid_dispersion"));
 	const float asteroid_max_speed = tz::util::cast::from_string<float>(engine.get_properties().get_tag("asteroid_max_speed"));
 	Vector3F position_offset = Vector3F(random.next_float(-spread_radius / 2, spread_radius / 2), random.next_float(-spread_radius / 2, spread_radius / 2), random.next_float(-spread_radius / 2, spread_radius / 2)) + camera.position;
-	asteroid_list.emplace_back(engine, position_offset, Vector3F(), asteroids::initial_asteroid_scale);
+	asteroid_list.emplace_back(engine, position_offset, Vector3F(), asteroids::initial_asteroid_scale * random.next_float(0.01, 1.0) * level * level);
 	asteroid_list.back().velocity = Vector3F(random.next_float(-1, 1), random.next_float(-1, 1), random.next_float(-1, 1));
-	asteroid_list.back().velocity += (camera.position - asteroid_list.back().position) * asteroids::chase_multiplier;
-	asteroid_list.back().velocity = asteroid_list.back().velocity.normalised() * asteroid_max_speed;
+	asteroid_list.back().velocity += (camera.position - asteroid_list.back().position) * asteroids::chase_multiplier * level;
+	asteroid_list.back().velocity = asteroid_list.back().velocity.normalised() * asteroid_max_speed * level;
 }
 
 void die(std::vector<Asteroid>& asteroid_list, std::vector<Shot>& shot_list, TextLabel& game_over_label)
@@ -220,7 +242,7 @@ void die(std::vector<Asteroid>& asteroid_list, std::vector<Shot>& shot_list, Tex
 	game_over_label.set_hidden(false);
 }
 
-void cleanup(const Camera& camera, std::vector<Asteroid>& asteroid_list, std::vector<Shot>& shot_list)
+void cleanup(const Camera& camera, std::vector<Asteroid>& asteroid_list, std::vector<Shot>& shot_list, unsigned int& score)
 {
 	for(auto iter_asteroid = asteroid_list.begin(); iter_asteroid != asteroid_list.end(); iter_asteroid++)
 	{
@@ -231,6 +253,8 @@ void cleanup(const Camera& camera, std::vector<Asteroid>& asteroid_list, std::ve
 				iter_asteroid = asteroid_list.erase(iter_asteroid);
 				iter_shot = shot_list.erase(iter_shot);
 				tz::audio::play_clip_async(AudioClip("../../../res/runtime/music/shot_impact.wav"));
+				asteroids::shot_streak++;
+				score += asteroids::shot_streak;
 				if(iter_asteroid == asteroid_list.end() || iter_shot == shot_list.end())
 					return;
 			}
@@ -249,6 +273,7 @@ void cleanup(const Camera& camera, std::vector<Asteroid>& asteroid_list, std::ve
 	{
 		if((camera.position - iter->position).length() > asteroids::culling_distance)
 		{
+			asteroids::shot_streak = 0;
 			iter = shot_list.erase(iter);
 			if(iter == shot_list.end())
 				return;

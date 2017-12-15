@@ -7,6 +7,8 @@ music_path: ../../../res/runtime/music/asteroids.wav
 initial_speed: 0.35
 # Recovery period length in milliseconds (time invincible after impact)
 recovery_period: 5000
+# Shoot delay length in milliseconds (minimum time between each shot)
+shot_period: 500
 # Number of asteroids spawned when the game starts
 asteroids: 25
 # Size of the field in which an asteroid can spawn, decreases difficulty
