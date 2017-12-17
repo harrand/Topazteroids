@@ -12,7 +12,7 @@ shot_period: 500
 # Size of the field in which an asteroid can spawn, decreases difficulty
 asteroid_dispersion: 500
 # Maximum random force applied to an asteroid, decreases difficulty
-asteroid_max_speed: 1000
+asteroid_max_speed: 100
 # Asteroid Max Size increment per level.
 asteroid_size: 75
 # Multiplier to the chase component of asteroid force, HUGELY increases difficulty
@@ -24,7 +24,7 @@ shoot_keybind: F
 # Size of a shot projectile
 shot_size: 30
 # Speed of a shot projectile
-shot_speed: 50000
+shot_speed: 5000
 # Testing purposes - spawns powerup at your location
 dev_powerup_keybind: P
 # Probability of an asteroid spawning per tick

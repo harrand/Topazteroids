@@ -95,11 +95,11 @@ void launch()
 	std::vector<Shot> shot_list;
 	std::vector<Powerup> powerup_list;
 	TrivialFunctor render_asteroid_list([&](){for(auto& asteroid : asteroid_list)asteroid.render(engine.camera, &engine.default_shader, game_window.get_width(), game_window.get_height());});
-	TrivialFunctor update_asteroid_list([&](){for(auto& asteroid : asteroid_list)asteroid.update_motion(engine.get_fps());});
+	TrivialFunctor update_asteroid_list([&](){for(auto& asteroid : asteroid_list)asteroid.update_motion(engine.get_tps());});
 	TrivialFunctor render_shot_list([&](){for(auto& shot : shot_list)shot.render(engine.camera, &engine.default_shader, game_window.get_width(), game_window.get_height());});
-	TrivialFunctor update_shot_list([&](){for(auto& shot : shot_list){shot.update_motion(engine.get_fps());}});
+	TrivialFunctor update_shot_list([&](){for(auto& shot : shot_list){shot.update_motion(engine.get_tps());}});
 	TrivialFunctor render_powerup_list([&](){for(auto& powerup : powerup_list){powerup.rotation.y += (5.0f / engine.get_fps());powerup.render(engine.camera, &engine.default_shader, game_window.get_width(), game_window.get_height());}});
-	TrivialFunctor update_powerup_list([&](){for(auto& powerup : powerup_list){powerup.update_motion(engine.get_fps());}});
+	TrivialFunctor update_powerup_list([&](){for(auto& powerup : powerup_list){powerup.update_motion(engine.get_tps());}});
 	engine.add_update_command(&render_asteroid_list);
 	engine.add_tick_command(&update_asteroid_list);
 	engine.add_update_command(&render_shot_list);

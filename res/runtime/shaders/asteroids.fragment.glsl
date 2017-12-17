@@ -84,6 +84,7 @@ void main()
 	sun.diffuse_component = 1.0;
 	sun.specular_component = 0.0;
 	
+
 	fragment_colour = ambience(sun, texture_colour);
 	fragment_colour += diffuse_directional(sun, position_worldspace, light_direction_worldspace, normal, texture_colour) + specular_directional(sun, eye_direction_cameraspace, light_direction_worldspace, normal, texture_colour);
 	fragment_colour += specular(sun, position_worldspace, eye_direction_cameraspace, normal, texture_colour);
